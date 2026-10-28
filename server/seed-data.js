@@ -66,13 +66,14 @@ export const courses = {
 }
 
 export const learningPaths = [
-  { id: 'ke-toan', title: 'Chuyên viên kế toán toàn diện', courseIds: [12, 13, 3, 9, 11, 14], courses: 18, learners: 1588, price: 11327000, oldPrice: 12584000, color: '#1fa855',
+  // Giá lộ trình = tổng giá các khóa bên trong, giảm discountPercent
+  { id: 'ke-toan', title: 'Chuyên viên kế toán toàn diện', courseIds: [12, 13, 3, 9, 11, 14], discountPercent: 25, courses: 18, learners: 1588, price: 11327000, oldPrice: 12584000, color: '#1fa855',
     desc: 'Toàn bộ kiến thức kế toán tài chính mà kế toán viên cần trang bị, thực hành trên Excel và phần mềm kế toán, cập nhật chính sách thuế hàng tuần.' },
-  { id: 'phan-tich-du-lieu', title: 'Chuyên viên phân tích dữ liệu toàn diện', courseIds: [16, 11, 8, 14, 9], courses: 17, learners: 957, price: 3717000, oldPrice: 20514000, color: '#2f6fed',
+  { id: 'phan-tich-du-lieu', title: 'Chuyên viên phân tích dữ liệu toàn diện', courseIds: [16, 11, 8, 14, 9], discountPercent: 30, courses: 17, learners: 957, price: 3717000, oldPrice: 20514000, color: '#2f6fed',
     desc: 'Từ Excel, VBA đến Power BI: thu thập, làm sạch, phân tích và trực quan hóa dữ liệu để ra quyết định kinh doanh.' },
-  { id: 'tin-hoc-van-phong', title: 'Kỹ năng tin học văn phòng toàn diện', courseIds: [16, 11, 15, 9, 10], courses: 8, learners: 684, price: 1698000, oldPrice: 5192000, color: '#f29d1b',
+  { id: 'tin-hoc-van-phong', title: 'Kỹ năng tin học văn phòng toàn diện', courseIds: [16, 11, 15, 9, 10], discountPercent: 20, courses: 8, learners: 684, price: 1698000, oldPrice: 5192000, color: '#f29d1b',
     desc: 'Thành thạo Excel, PowerPoint và các thủ thuật văn phòng giúp tăng năng suất làm việc mỗi ngày.' },
-  { id: 'ky-su-xay-dung', title: 'Kỹ sư xây dựng', courseIds: [11, 14, 6, 1], courses: 6, learners: 442, price: 2498000, oldPrice: 7094000, color: '#e5293f',
+  { id: 'ky-su-xay-dung', title: 'Kỹ sư xây dựng', courseIds: [11, 14, 6, 1], discountPercent: 15, courses: 6, learners: 442, price: 2498000, oldPrice: 7094000, color: '#e5293f',
     desc: 'Bộ kỹ năng bổ trợ cho kỹ sư: bóc tách khối lượng bằng Excel, tự động hóa với VBA, quản lý dự án và thời gian.' },
 ]
 

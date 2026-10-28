@@ -3,6 +3,7 @@ import { api, useTopics } from '../api.js'
 import { navigate } from '../router.js'
 import { useAction } from './useAction.js'
 import Status from '../components/Status.jsx'
+import LessonVideo from './LessonVideo.jsx'
 
 const empty = {
   title: '', teacher: '', teacherBio: '', topic: 'tech', collection: '', price: 0, oldPrice: 0,
@@ -24,11 +25,14 @@ export default function CourseForm({ id }) {
   })
   const { run, busy, error } = useAction()
 
-  useEffect(() => {
-    if (!id) return
+  const load = () =>
     api(`/admin/courses/${encodeURIComponent(id)}`)
       .then((c) => setForm({ ...c, collection: c.collection || '', outcomes: c.outcomes.length ? c.outcomes : [''] }))
       .catch(setLoadError)
+
+  useEffect(() => {
+    if (id) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   if (!form) return <Status loading={!loadError} error={loadError} />
@@ -47,11 +51,14 @@ export default function CourseForm({ id }) {
     run(async () => {
       const body = { ...form, price: Number(form.price), oldPrice: Number(form.oldPrice), hours: Number(form.hours) }
       const res = await api(id ? `/admin/courses/${id}` : '/admin/courses', { method: id ? 'PUT' : 'POST', body })
-      setSaved(true)
       if (!id) {
         justCreatedId = res.id
         navigate(`#/admin/khoa-hoc/${res.id}`)
+        return
       }
+      // Tải lại để bài học mới có id (cần id mới tải được video)
+      await load()
+      setSaved(true)
     })
   }
 
@@ -100,14 +107,30 @@ export default function CourseForm({ id }) {
                   <button type="button" className="icon-btn" onClick={() => update((f) => { f.curriculum.splice(ci, 1); return f })} aria-label="Xóa chương">✕</button>
                 </div>
                 {ch.lessons.map((l, li) => (
-                  <div key={li} className="inline-row lesson-edit">
-                    <input value={l.title} placeholder="Tên bài học" onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].title = e.target.value; return f })} />
-                    <input className="short" value={l.duration} placeholder="mm:ss" onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].duration = e.target.value; return f })} />
-                    <label className="check">
-                      <input type="checkbox" checked={l.preview} onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].preview = e.target.checked; return f })} />
-                      Học thử
-                    </label>
-                    <button type="button" className="icon-btn" onClick={() => update((f) => { f.curriculum[ci].lessons.splice(li, 1); return f })} aria-label="Xóa bài">✕</button>
+                  <div key={l.id ?? `new-${ci}-${li}`} className="lesson-block">
+                    <div className="inline-row lesson-edit">
+                      <input value={l.title} placeholder="Tên bài học" onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].title = e.target.value; return f })} />
+                      <input className="short" value={l.duration} placeholder="mm:ss" onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].duration = e.target.value; return f })} />
+                      <label className="check">
+                        <input type="checkbox" checked={l.preview} onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].preview = e.target.checked; return f })} />
+                        Học thử
+                      </label>
+                      <button type="button" className="icon-btn" aria-label="Xóa bài"
+                        onClick={() => (!l.hasVideo || window.confirm(`Bài “${l.title}” có video. Video sẽ bị xóa khi bạn lưu khóa học. Tiếp tục?`)) && update((f) => { f.curriculum[ci].lessons.splice(li, 1); return f })}>✕</button>
+                    </div>
+                    <div className="lesson-extra">
+                      {/* Video lưu ngay trên server nên không đánh dấu form là "chưa lưu" */}
+                      <LessonVideo lesson={l} onChange={(patch) => setForm((f) => {
+                        const next = structuredClone(f)
+                        Object.assign(next.curriculum[ci].lessons[li], patch)
+                        return next
+                      })} />
+                      <details>
+                        <summary className="muted small">📝 Ghi chú / tài liệu bài học{l.content ? ' (có)' : ''}</summary>
+                        <textarea rows="4" value={l.content || ''} placeholder="Tóm tắt, link tài liệu, bài tập… (hiện dưới video, chỉ người đã mua mới xem được)"
+                          onChange={(e) => update((f) => { f.curriculum[ci].lessons[li].content = e.target.value; return f })} />
+                      </details>
+                    </div>
                   </div>
                 ))}
                 <button type="button" className="link-btn left" onClick={() => update((f) => { f.curriculum[ci].lessons.push({ title: '', duration: '', preview: false }); return f })}>

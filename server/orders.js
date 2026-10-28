@@ -67,7 +67,7 @@ function markOrderPaid(orderId, method, note) {
 // ---------- Tạo đơn & thanh toán ----------
 
 /** Tạo đơn hàng. Đơn 0đ được kích hoạt ngay; đơn có phí ở trạng thái "pending" chờ VNPay xác nhận. */
-export function createOrder(user, { courses, coupon, subtotal, discount, total }) {
+export function createOrder(user, { courses, coupon, subtotal, discount, total, note = null }) {
   if (total > 0 && vnpay.mode === 'disabled') {
     throw new HttpError(503, 'Cổng thanh toán chưa được cấu hình. Vui lòng liên hệ hỗ trợ.')
   }
@@ -77,7 +77,7 @@ export function createOrder(user, { courses, coupon, subtotal, discount, total }
     const orderId = Number(lastInsertRowid)
     const insItem = db.prepare('INSERT INTO order_items (order_id, course_id, price) VALUES (?, ?, ?)')
     for (const c of courses) insItem.run(orderId, c.id, c.price)
-    logEvent(orderId, 'created', { amount: total, actorId: user.id, note: coupon ? `Mã ${coupon.code}` : null })
+    logEvent(orderId, 'created', { amount: total, actorId: user.id, note: note ?? (coupon ? `Mã ${coupon.code}` : null) })
     if (total === 0) markOrderPaid(orderId, 'free', 'Đơn 0đ, kích hoạt ngay')
     return orderId
   })

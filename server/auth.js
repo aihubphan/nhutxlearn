@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import { db } from './db.js'
 
@@ -17,7 +18,26 @@ export class HttpError extends Error {
   }
 }
 
-export const signToken = (user) => jwt.sign({ sub: user.id }, SECRET, { algorithm: 'HS256', expiresIn: '7d' })
+// Đường dẫn xem video có chữ ký: <lessonId>.<hết hạn (giây)>.<HMAC>. Thẻ <video> không gửi được
+// header Authorization nên quyền xem được kiểm tra khi cấp đường dẫn, rồi gói vào chữ ký.
+const mediaSig = (payload) => createHmac('sha256', SECRET).update(`media:${payload}`).digest('base64url')
+
+export function signMediaToken(lessonId, ttlSeconds = 6 * 3600) {
+  const payload = `${lessonId}.${Math.floor(Date.now() / 1000) + ttlSeconds}`
+  return `${payload}.${mediaSig(payload)}`
+}
+
+export function verifyMediaToken(token) {
+  const m = /^(\d+)\.(\d+)\.([\w-]+)$/.exec(String(token))
+  if (!m) return null
+  const expected = Buffer.from(mediaSig(`${m[1]}.${m[2]}`))
+  const actual = Buffer.from(m[3])
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null
+  if (Number(m[2]) < Date.now() / 1000) return null
+  return Number(m[1])
+}
+
+export const signToken =(user) => jwt.sign({ sub: user.id }, SECRET, { algorithm: 'HS256', expiresIn: '7d' })
 
 const findUser = db.prepare('SELECT id, name, email, role, created_at AS createdAt FROM users WHERE id = ?')
 

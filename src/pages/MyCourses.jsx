@@ -18,16 +18,26 @@ export default function MyCourses({ user, courses }) {
       <p className="muted small-gap">Xin chào {user.name} · {user.email}</p>
       {courses.length ? (
         <div className="my-courses">
-          {courses.map((c) => (
-            <a key={c.id} href={`#/khoa-hoc/${c.id}`} className="timeline-card">
-              <span className="timeline-emoji" style={{ background: c.color }}>{c.emoji}</span>
-              <span>
-                <b>{c.title}</b>
-                <small className="muted">{c.teacher} · {c.lessonCount} bài · {c.hours} giờ</small>
-              </span>
-              <span className="btn-outline">Vào học</span>
-            </a>
-          ))}
+          {courses.map((c) => {
+            const p = c.progress
+            const href = `#/hoc/${c.id}${p?.lastLessonId ? `/${p.lastLessonId}` : ''}`
+            return (
+              <div key={c.id} className="timeline-card my-course">
+                <a href={href} className="timeline-emoji" style={{ background: c.color }}>{c.emoji}</a>
+                <span className="my-course-info">
+                  <a href={href}><b>{c.title}</b></a>
+                  <small className="muted">{c.teacher} · {c.lessonCount} bài · {c.hours} giờ</small>
+                  {p && (
+                    <span className="my-progress">
+                      <span className="bar"><span style={{ width: `${p.percent}%` }} /></span>
+                      <small className="muted">{p.percent === 100 ? '✓ Đã hoàn thành' : `${p.done}/${p.total} bài · ${p.percent}%`}</small>
+                    </span>
+                  )}
+                </span>
+                <a href={href} className="btn-outline">{!p?.lastLessonId ? 'Bắt đầu học' : p.percent === 100 ? 'Học lại' : 'Tiếp tục học'}</a>
+              </div>
+            )
+          })}
         </div>
       ) : (
         <div className="box center">

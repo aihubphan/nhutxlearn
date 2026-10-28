@@ -14,6 +14,7 @@ const { rateLimit } = await import('express-rate-limit')
 const { db, transaction } = await import('./db.js')
 const { HttpError, hashPassword, verifyPassword, signToken, optionalAuth, requireAuth } = await import('./auth.js')
 const { default: adminRouter } = await import('./admin.js')
+const { default: learningRouter, courseProgress } = await import('./learning.js')
 const { getOrderDetail, requestRefund, createOrder, startPayment, confirmPayment, cancelPendingOrder } = await import('./orders.js')
 const { mode: paymentMode, verifySignature: verifyVnpaySignature, signParams: signVnpayParams, vnTime } = await import('./vnpay.js')
 
@@ -61,7 +62,8 @@ const limits = {
   refundRequest: limit(60, 5),
   order: limit(15, 30),
 }
-app.use('/api', limit(1, 300))
+// Video bị tua sẽ sinh nhiều request Range, nên đường dẫn phát video không tính vào giới hạn chung
+app.use('/api', limit(1, 300, { skip: (req) => req.path.startsWith('/media/') }))
 
 app.use(express.json({ limit: '100kb' }))
 app.use(optionalAuth)
@@ -98,13 +100,42 @@ app.get('/api/topics', (_req, res) => {
   res.json(db.prepare('SELECT id, name, icon, count FROM topics ORDER BY sort').all())
 })
 
+// ---------- Lộ trình ----------
+// Giá lộ trình không lưu cố định: = tổng giá các khóa đang bán trong lộ trình, giảm discount_percent.
+// Khách đã sở hữu khóa nào thì không phải trả phần của khóa đó.
+const pathRow = (id) => db.prepare(`SELECT id, title, description AS "desc", learners, color,
+  discount_percent AS discountPercent FROM paths WHERE id = ?`).get(id)
+
+const pathCourses = (pathId) => db.prepare(`SELECT ${COURSE_FIELDS} FROM path_courses pc JOIN courses c ON c.id = pc.course_id
+  WHERE pc.path_id = ? AND c.published = 1 ORDER BY pc.position`).all(pathId)
+
+const pathPrice = (course, percent) => Math.round((course.price * (100 - percent)) / 100)
+
+function pathPricing(path, userId = null) {
+  const courses = pathCourses(path.id)
+  const owned = new Set(userId ? enrolledIds(userId) : [])
+  const remaining = courses.filter((c) => !owned.has(c.id))
+  return {
+    courses: courses.length,
+    oldPrice: courses.reduce((s, c) => s + c.price, 0),
+    price: courses.reduce((s, c) => s + pathPrice(c, path.discountPercent), 0),
+    ownedCount: courses.length - remaining.length,
+    priceForYou: remaining.reduce((s, c) => s + pathPrice(c, path.discountPercent), 0),
+    courseList: courses.map((c) => ({ ...c, owned: owned.has(c.id) })),
+  }
+}
+
 app.get('/api/home', (_req, res) => {
+  const paths = db.prepare('SELECT id FROM paths ORDER BY sort').all().map(({ id }) => {
+    const path = pathRow(id)
+    const { courseList, ownedCount, priceForYou, ...pricing } = pathPricing(path)
+    return { ...path, ...pricing }
+  })
   res.json({
     sale: coursesBy("c.collection = 'sale'"),
     popular: coursesBy("c.collection = 'popular'"),
     new: coursesBy("c.collection = 'new'"),
-    paths: db.prepare(`SELECT id, title, total_courses AS courses, learners, price, old_price AS oldPrice, color
-      FROM paths ORDER BY sort`).all(),
+    paths,
   })
 })
 
@@ -144,13 +175,13 @@ app.get('/api/courses/:id', (req, res) => {
   const extra = db.prepare(`SELECT c.description, c.outcomes, c.teacher_bio AS teacherBio, t.name AS topicName
     FROM courses c JOIN topics t ON t.id = c.topic_id WHERE c.id = ?`).get(course.id)
 
-  const lessons = db.prepare(`SELECT chapter_no, chapter, title, duration, preview
+  const lessons = db.prepare(`SELECT id, chapter_no, chapter, title, duration, preview, video_file
     FROM lessons WHERE course_id = ? ORDER BY chapter_no, position`).all(course.id)
   const curriculum = []
   for (const l of lessons) {
     let ch = curriculum[l.chapter_no - 1]
     if (!ch) ch = curriculum[l.chapter_no - 1] = { name: `Chương ${l.chapter_no}: ${l.chapter}`, lessons: [] }
-    ch.lessons.push({ title: l.title, duration: l.duration, preview: !!l.preview })
+    ch.lessons.push({ id: l.id, title: l.title, duration: l.duration, preview: !!l.preview, hasVideo: !!l.video_file })
   }
 
   res.json({
@@ -164,12 +195,9 @@ app.get('/api/courses/:id', (req, res) => {
 })
 
 app.get('/api/paths/:id', (req, res) => {
-  const path = db.prepare(`SELECT id, title, description AS "desc", total_courses AS courses, learners, price,
-    old_price AS oldPrice, color FROM paths WHERE id = ?`).get(req.params.id)
+  const path = pathRow(req.params.id)
   if (!path) throw new HttpError(404, 'Không tìm thấy lộ trình')
-  const courses = db.prepare(`SELECT ${COURSE_FIELDS} FROM path_courses pc JOIN courses c ON c.id = pc.course_id
-    WHERE pc.path_id = ? AND c.published = 1 ORDER BY pc.position`).all(path.id)
-  res.json({ ...path, courseList: courses })
+  res.json({ ...path, ...pathPricing(path, req.user?.id) })
 })
 
 app.get('/api/plans', (_req, res) => {
@@ -211,8 +239,9 @@ app.post('/api/auth/login', limits.login, (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => res.json(publicUser(req.user)))
 
 app.get('/api/me/courses', requireAuth, (req, res) => {
-  res.json(db.prepare(`SELECT ${COURSE_FIELDS}, e.created_at AS enrolledAt FROM enrollments e
-    JOIN courses c ON c.id = e.course_id WHERE e.user_id = ? ORDER BY e.created_at DESC`).all(req.user.id))
+  const courses = db.prepare(`SELECT ${COURSE_FIELDS}, e.created_at AS enrolledAt FROM enrollments e
+    JOIN courses c ON c.id = e.course_id WHERE e.user_id = ? ORDER BY e.created_at DESC`).all(req.user.id)
+  res.json(courses.map((c) => ({ ...c, progress: courseProgress(req.user.id, c.id) })))
 })
 
 app.get('/api/me/orders', requireAuth, (req, res) => {
@@ -237,25 +266,36 @@ app.post('/api/coupons/validate', limits.coupon, (req, res) => {
 // Tạo đơn hàng: giá luôn tính lại ở server, không tin giá gửi từ client.
 // Đơn có phí ở trạng thái "pending" và trả về paymentUrl để chuyển khách sang VNPay;
 // khóa học chỉ được mở khi VNPay xác nhận thanh toán (IPN / Return URL).
+// Body: { courseIds, coupon } khi mua từ giỏ hàng, hoặc { pathId } khi mua cả lộ trình.
 app.post('/api/orders', limits.order, requireAuth, (req, res) => {
-  const ids = [...new Set((Array.isArray(req.body?.courseIds) ? req.body.courseIds : []).map(Number))].filter(Number.isInteger)
-  if (!ids.length) throw new HttpError(400, 'Giỏ hàng trống')
-
   const owned = new Set(enrolledIds(req.user.id))
-  const courses = ids.map(getCourse).filter(Boolean).filter((c) => !owned.has(c.id))
-  if (!courses.length) throw new HttpError(400, 'Bạn đã sở hữu tất cả khóa học trong giỏ')
+  let courses, coupon = null, subtotal, total, note = null
 
-  let coupon = null
-  if (req.body?.coupon) {
-    coupon = findCoupon(req.body.coupon)
-    if (!coupon) throw new HttpError(400, 'Mã giảm giá không hợp lệ')
+  if (req.body?.pathId) {
+    // Mua lộ trình: giá ưu đãi của lộ trình, không cộng thêm mã giảm giá
+    const path = pathRow(String(req.body.pathId))
+    if (!path) throw new HttpError(404, 'Không tìm thấy lộ trình')
+    if (req.body.coupon) throw new HttpError(400, 'Mã giảm giá không áp dụng cho lộ trình')
+    courses = pathCourses(path.id).filter((c) => !owned.has(c.id))
+    if (!courses.length) throw new HttpError(400, 'Bạn đã sở hữu toàn bộ khóa học trong lộ trình')
+    subtotal = courses.reduce((s, c) => s + c.price, 0)
+    total = courses.reduce((s, c) => s + pathPrice(c, path.discountPercent), 0)
+    note = `Lộ trình: ${path.title} (-${path.discountPercent}%)`
+  } else {
+    const ids = [...new Set((Array.isArray(req.body?.courseIds) ? req.body.courseIds : []).map(Number))].filter(Number.isInteger)
+    if (!ids.length) throw new HttpError(400, 'Giỏ hàng trống')
+    courses = ids.map(getCourse).filter(Boolean).filter((c) => !owned.has(c.id))
+    if (!courses.length) throw new HttpError(400, 'Bạn đã sở hữu tất cả khóa học trong giỏ')
+    if (req.body?.coupon) {
+      coupon = findCoupon(req.body.coupon)
+      if (!coupon) throw new HttpError(400, 'Mã giảm giá không hợp lệ')
+    }
+    subtotal = courses.reduce((s, c) => s + c.price, 0)
+    total = subtotal - (coupon ? Math.round((subtotal * coupon.percent) / 100) : 0)
   }
+  const discount = subtotal - total
 
-  const subtotal = courses.reduce((s, c) => s + c.price, 0)
-  const discount = coupon ? Math.round((subtotal * coupon.percent) / 100) : 0
-  const total = subtotal - discount
-
-  const orderId = createOrder(req.user, { courses, coupon, subtotal, discount, total })
+  const orderId = createOrder(req.user, { courses, coupon, subtotal, discount, total, note })
   const paymentUrl = total > 0 ? startPayment(orderId, req) : null
 
   res.status(201).json({
@@ -381,6 +421,7 @@ app.post('/api/newsletter', limits.newsletter, (req, res) => {
 })
 
 app.use('/api/admin', adminRouter)
+app.use('/api', learningRouter)
 
 app.use('/api', (_req, _res) => {
   throw new HttpError(404, 'API không tồn tại')

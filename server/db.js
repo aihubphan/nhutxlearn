@@ -152,6 +152,29 @@ db.exec(`CREATE TABLE IF NOT EXISTS payments (
 )`)
 db.exec('CREATE INDEX IF NOT EXISTS payments_order ON payments(order_id)')
 
+// Nội dung học: video + ghi chú từng bài, tiến độ học của từng học viên
+addColumn('lessons', 'video_file', 'TEXT')
+addColumn('lessons', 'video_size', 'INTEGER')
+addColumn('lessons', 'content', 'TEXT')
+db.exec(`CREATE TABLE IF NOT EXISTS lesson_progress (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  position REAL NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, lesson_id)
+)`)
+
+// Video lưu ngoài thư mục public, chỉ phát qua đường dẫn có chữ ký (server/learning.js)
+export const VIDEO_DIR = resolve(process.env.UPLOAD_DIR || resolve(dirname(file), 'uploads'), 'videos')
+mkdirSync(VIDEO_DIR, { recursive: true })
+
+// Lộ trình: giá tính từ các khóa bên trong, giảm theo %
+if (addColumn('paths', 'discount_percent', 'INTEGER NOT NULL DEFAULT 20')) {
+  const set = db.prepare('UPDATE paths SET discount_percent = ? WHERE id = ?')
+  seed.learningPaths.forEach((p) => set.run(p.discountPercent, p.id))
+}
+
 export function transaction(fn) {
   db.exec('BEGIN')
   try {
@@ -202,11 +225,11 @@ function seedIfEmpty() {
       }
     }
 
-    const insPath = db.prepare(`INSERT INTO paths (id, title, description, total_courses, learners, price, old_price, color, sort)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    const insPath = db.prepare(`INSERT INTO paths (id, title, description, total_courses, learners, price, old_price, color, sort, discount_percent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     const insPathCourse = db.prepare('INSERT INTO path_courses (path_id, course_id, position) VALUES (?, ?, ?)')
     seed.learningPaths.forEach((p, i) => {
-      insPath.run(p.id, p.title, p.desc, p.courses, p.learners, p.price, p.oldPrice, p.color, i)
+      insPath.run(p.id, p.title, p.desc, p.courses, p.learners, p.price, p.oldPrice, p.color, i, p.discountPercent)
       p.courseIds.forEach((cid, pos) => insPathCourse.run(p.id, cid, pos))
     })
 

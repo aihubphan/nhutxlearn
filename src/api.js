@@ -37,6 +37,27 @@ export async function api(path, { method = 'GET', body } = {}) {
   return data
 }
 
+// Tải file lên kèm tiến độ (fetch không báo được tiến độ upload nên dùng XMLHttpRequest)
+export function uploadFile(path, file, { headers = {}, onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api${path}`)
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+    for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v)
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(Math.round((e.loaded / e.total) * 100))
+    xhr.onload = () => {
+      let data = {}
+      try { data = JSON.parse(xhr.responseText) } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+      else reject(new Error(data.error || `Lỗi máy chủ (${xhr.status})`))
+    }
+    xhr.onerror = () => reject(new Error('Không kết nối được máy chủ'))
+    xhr.send(file)
+  })
+}
+
 // Dữ liệu ít thay đổi (chủ đề, gói hội viên, trang tĩnh) được nhớ lại trong phiên
 const cache = new Map()
 

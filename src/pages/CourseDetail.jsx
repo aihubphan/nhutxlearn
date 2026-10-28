@@ -9,7 +9,6 @@ import NotFound from './NotFound.jsx'
 export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnrolled }) {
   const { data: course, loading, error } = useApi(`/courses/${encodeURIComponent(id)}`)
   const [open, setOpen] = useState(0)
-  const [preview, setPreview] = useState(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
 
@@ -32,6 +31,7 @@ export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnr
     try {
       await api(`/courses/${course.id}/enroll`, { method: 'POST' })
       onEnrolled()
+      navigate(`#/hoc/${course.id}`)
     } catch (e) {
       setActionError(e.message)
     } finally {
@@ -85,11 +85,11 @@ export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnr
                 {open === i && (
                   <ul className="lessons">
                     {ch.lessons.map((l) => (
-                      <li key={l.title}>
-                        <span>▶ {l.title}</span>
+                      <li key={l.id}>
+                        <span>{l.hasVideo ? '▶' : '📄'} {l.title}</span>
                         <span>
                           {(l.preview || isEnrolled) && (
-                            <button className="link-btn" onClick={() => setPreview(l)}>{isEnrolled ? 'Học' : 'Học thử'}</button>
+                            <a href={`#/hoc/${course.id}/${l.id}`} className="link-btn">{isEnrolled ? 'Học' : 'Học thử'}</a>
                           )}
                           <span className="muted">{l.duration}</span>
                         </span>
@@ -124,9 +124,7 @@ export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnr
               {off > 0 && <span className="tag">-{off}%</span>}
             </div>
             {isEnrolled ? (
-              <button className="btn-primary full" onClick={() => setPreview(course.curriculum[0].lessons[0])}>
-                ✓ Đã sở hữu – Vào học
-              </button>
+              <a href={`#/hoc/${course.id}`} className="btn-primary full center-text">✓ Đã sở hữu – Vào học</a>
             ) : course.price === 0 ? (
               <button className="btn-primary full" onClick={enrollFree} disabled={busy}>
                 {busy ? 'Đang ghi danh...' : 'Ghi danh miễn phí'}
@@ -159,19 +157,6 @@ export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnr
             ))}
           </div>
         </section>
-      )}
-
-      {preview && (
-        <div className="modal" onClick={() => setPreview(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setPreview(null)} aria-label="Đóng">✕</button>
-            <div className="video" style={{ background: course.color }}>
-              <span>▶</span>
-            </div>
-            <h3>{preview.title}</h3>
-            <p className="muted">{isEnrolled ? 'Bài học' : 'Bài học thử'} của khóa “{course.title}” · {preview.duration}</p>
-          </div>
-        </div>
       )}
     </>
   )

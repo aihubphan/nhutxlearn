@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto'
 import { db, transaction } from './db.js'
 import { HttpError, requireAdmin } from './auth.js'
 import { ORDER_STATUSES, getOrderDetail, refundOrder, rejectRefundRequest, cancelPendingOrder, clientIp } from './orders.js'
+import { receiveLessonVideo, deleteLessonVideo, removeVideoFiles } from './learning.js'
 
 const router = Router()
 router.use(requireAdmin)
@@ -74,9 +75,13 @@ router.get('/courses/:id', (req, res) => {
   if (!c) throw new HttpError(404, 'Không tìm thấy khóa học')
 
   const curriculum = []
-  for (const l of db.prepare('SELECT chapter_no, chapter, title, duration, preview FROM lessons WHERE course_id = ? ORDER BY chapter_no, position').all(c.id)) {
+  for (const l of db.prepare(`SELECT id, chapter_no, chapter, title, duration, preview, content, video_file, video_size
+    FROM lessons WHERE course_id = ? ORDER BY chapter_no, position`).all(c.id)) {
     const ch = (curriculum[l.chapter_no - 1] ??= { name: l.chapter, lessons: [] })
-    ch.lessons.push({ title: l.title, duration: l.duration, preview: !!l.preview })
+    ch.lessons.push({
+      id: l.id, title: l.title, duration: l.duration, preview: !!l.preview, content: l.content || '',
+      hasVideo: !!l.video_file, videoSize: l.video_size,
+    })
   }
   res.json({ ...c, published: !!c.published, outcomes: JSON.parse(c.outcomes), curriculum })
 })
@@ -102,9 +107,11 @@ function parseCourse(b = {}) {
     curriculum: (Array.isArray(b.curriculum) ? b.curriculum : []).slice(0, 50).map((ch) => ({
       name: str(ch?.name, 200),
       lessons: (Array.isArray(ch?.lessons) ? ch.lessons : []).slice(0, 100).map((l) => ({
+        id: Number.isInteger(l?.id) ? l.id : null,
         title: str(l?.title, 200),
         duration: str(l?.duration, 10),
         preview: !!l?.preview,
+        content: str(l?.content, 20000),
       })).filter((l) => l.title),
     })).filter((ch) => ch.name),
   }
@@ -132,23 +139,49 @@ function saveCourse(id, c) {
         emoji, color, level, hours, description, outcomes, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(...values).lastInsertRowid)
     }
-    db.prepare('DELETE FROM lessons WHERE course_id = ?').run(id)
-    const ins = db.prepare('INSERT INTO lessons (course_id, chapter_no, chapter, position, title, duration, preview) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    c.curriculum.forEach((ch, ci) => ch.lessons.forEach((l, li) => ins.run(id, ci + 1, ch.name, li + 1, l.title, l.duration, l.preview ? 1 : 0)))
-    return id
+    // Cập nhật bài học theo id (giữ video + tiến độ học), thêm bài mới, xóa bài bị bỏ đi
+    const existing = new Map(db.prepare('SELECT id, video_file FROM lessons WHERE course_id = ?').all(id).map((l) => [l.id, l]))
+    const kept = new Set()
+    const upd = db.prepare(`UPDATE lessons SET chapter_no = ?, chapter = ?, position = ?, title = ?, duration = ?, preview = ?, content = ?
+      WHERE id = ? AND course_id = ?`)
+    const ins = db.prepare(`INSERT INTO lessons (course_id, chapter_no, chapter, position, title, duration, preview, content)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    c.curriculum.forEach((ch, ci) => ch.lessons.forEach((l, li) => {
+      const values = [ci + 1, ch.name, li + 1, l.title, l.duration, l.preview ? 1 : 0, l.content]
+      if (l.id && existing.has(l.id) && !kept.has(l.id)) {
+        upd.run(...values, l.id, id)
+        kept.add(l.id)
+      } else {
+        ins.run(id, ...values)
+      }
+    }))
+    const removed = [...existing.values()].filter((l) => !kept.has(l.id))
+    const del = db.prepare('DELETE FROM lessons WHERE id = ?')
+    removed.forEach((l) => del.run(l.id))
+    return { id, removedVideos: removed.map((l) => l.video_file) }
   })
 }
 
-router.post('/courses', (req, res) => {
-  const id = saveCourse(null, parseCourse(req.body))
+router.post('/courses', async (req, res) => {
+  const { id } = saveCourse(null, parseCourse(req.body))
   res.status(201).json({ id })
 })
 
-router.put('/courses/:id', (req, res) => {
+router.put('/courses/:id', async (req, res) => {
   const id = idParam(req)
   if (!db.prepare('SELECT 1 FROM courses WHERE id = ?').get(id)) throw new HttpError(404, 'Không tìm thấy khóa học')
-  saveCourse(id, parseCourse(req.body))
+  const { removedVideos } = saveCourse(id, parseCourse(req.body))
+  await removeVideoFiles(removedVideos)
   res.json({ id })
+})
+
+// Tải video cho một bài học: thân request là file video (không dùng multipart)
+router.post('/lessons/:id/video', async (req, res) => {
+  res.json(await receiveLessonVideo(req, idParam(req)))
+})
+
+router.delete('/lessons/:id/video', async (req, res) => {
+  res.json(await deleteLessonVideo(idParam(req)))
 })
 
 router.patch('/courses/:id', (req, res) => {
@@ -159,8 +192,9 @@ router.patch('/courses/:id', (req, res) => {
   res.json({ id, published: req.body.published })
 })
 
-router.delete('/courses/:id', (req, res) => {
+router.delete('/courses/:id', async (req, res) => {
   const id = idParam(req)
+  const videos = db.prepare('SELECT video_file FROM lessons WHERE course_id = ?').all(id).map((l) => l.video_file)
   const used = db.prepare(`SELECT
     (SELECT COUNT(*) FROM order_items WHERE course_id = ?) + (SELECT COUNT(*) FROM enrollments WHERE course_id = ?) +
     (SELECT COUNT(*) FROM activation_codes WHERE course_id = ?) AS n`).get(id, id, id).n
@@ -171,6 +205,7 @@ router.delete('/courses/:id', (req, res) => {
     const { changes } = db.prepare('DELETE FROM courses WHERE id = ?').run(id)
     if (!changes) throw new HttpError(404, 'Không tìm thấy khóa học')
   })
+  await removeVideoFiles(videos)
   res.json({ ok: true })
 })
 

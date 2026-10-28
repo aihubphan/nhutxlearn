@@ -13,6 +13,7 @@ import InfoPage from './pages/InfoPage.jsx'
 import NotFound from './pages/NotFound.jsx'
 import AdminApp from './admin/AdminApp.jsx'
 import PaymentResult from './pages/PaymentResult.jsx'
+import Learn from './pages/Learn.jsx'
 import { useRoute, navigate } from './router.js'
 import { api, getToken, setToken } from './api.js'
 
@@ -90,20 +91,27 @@ export default function App() {
     if (parts[0] !== 'khoa-hoc' || parts[1]) navigate('#/khoa-hoc')
   }
 
-  const [section, param] = parts
+  // Mở "Khóa học của tôi" thì tải lại để tiến độ học luôn mới
+  useEffect(() => {
+    if (parts[0] === 'khoa-hoc-cua-toi' && user) refreshMine()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parts[0], user?.id])
+
+  const [section, param, sub] = parts
   let page
   if (!section) page = <Home cart={cart} onAdd={addToCart} />
   else if (section === 'khoa-hoc' && param)
     page = <CourseDetail key={param} id={param} cart={cart} onAdd={addToCart} user={user} enrolledIds={enrolledIds} onEnrolled={refreshMine} />
   else if (section === 'khoa-hoc')
     page = <CourseList key={JSON.stringify(query)} query={query} search={search} cart={cart} onAdd={addToCart} />
-  else if (section === 'lo-trinh') page = <PathDetail id={param} onAdd={addToCart} />
+  else if (section === 'lo-trinh') page = <PathDetail id={param} user={user} onPaid={onPaid} />
   else if (section === 'gio-hang')
     page = <Cart cart={cart} user={user} enrolledIds={enrolledIds} onRemove={removeFromCart} onPaid={onPaid} />
   else if (section === 'dang-nhap') page = <Login query={query} onLogin={onLogin} />
   else if (section === 'hoi-vien') page = <Membership />
   else if (section === 'khoa-hoc-cua-toi') page = <MyCourses user={user} courses={myCourses} />
   else if (section === 'trang') page = <InfoPage key={param} slug={param} user={user} onActivated={refreshMine} />
+  else if (section === 'hoc' && param) page = <Learn key={param} courseId={param} lessonId={sub} user={user} />
   else if (section === 'thanh-toan') page = <PaymentResult query={query} user={user} onPaid={onPaid} />
   else if (section === 'admin') page = <AdminApp parts={parts.slice(1)} user={user} authChecked={authChecked} />
   else page = <NotFound />

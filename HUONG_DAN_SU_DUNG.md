@@ -33,7 +33,7 @@ Phiên đăng nhập được giữ 7 ngày. Trên máy dùng chung, hãy đăng
 
 **Xem chi tiết và học thử**
 
-Bấm vào ảnh hoặc tên khóa học để xem mô tả, "Bạn sẽ học được gì", giáo trình và giảng viên. Trong **Nội dung khóa học**, bấm tên chương để mở danh sách bài; bài có nút **Học thử** xem được miễn phí trước khi mua.
+Bấm vào ảnh hoặc tên khóa học để xem mô tả, "Bạn sẽ học được gì", giáo trình và giảng viên. Trong **Nội dung khóa học**, bấm tên chương để mở danh sách bài (▶ = bài có video, 📄 = bài đọc). Bài có nút **Học thử** mở trang học và xem được miễn phí trước khi mua, không cần đăng nhập.
 
 ## Mua khóa học và thanh toán VNPay
 
@@ -59,7 +59,16 @@ Bạn cũng làm được hai việc này sau, trong **Khóa học của tôi �
 
 **Khóa học miễn phí**
 
-Trong trang khóa học miễn phí, bấm **Ghi danh miễn phí** — không qua VNPay. Nếu giỏ chỉ có khóa 0đ, nút thanh toán đổi thành **Nhận khóa học miễn phí**.
+Trong trang khóa học miễn phí, bấm **Ghi danh miễn phí** — không qua VNPay, bạn được đưa thẳng vào trang học. Nếu giỏ chỉ có khóa 0đ, nút thanh toán đổi thành **Nhận khóa học miễn phí**.
+
+**Mua cả lộ trình**
+
+Trang lộ trình (ví dụ "Chuyên viên kế toán toàn diện") bán trọn bộ các khóa bên trong với giá giảm theo % ghi trên trang.
+
+1. Bấm **Mua lộ trình · …đ** (chưa đăng nhập thì là **Đăng nhập để mua lộ trình**).
+2. Thanh toán qua VNPay như mua khóa lẻ.
+
+Nếu bạn đã có sẵn một số khóa trong lộ trình, trang ghi "Bạn đã có x/y khóa" và bạn **chỉ trả phần của các khóa còn lại** (vẫn được giảm giá). Ưu đãi lộ trình không cộng thêm mã giảm giá.
 
 ## Khóa học của tôi, kích hoạt mã và hoàn tiền
 
@@ -67,7 +76,15 @@ Mọi khóa học bạn sở hữu và mọi đơn hàng đều nằm trong tran
 
 **Học bài**
 
-Bấm **Vào học** ở khóa muốn học. Trong trang khóa học, mọi bài đều có nút **Học**; khóa bạn sở hữu được học trọn đời.
+Mỗi khóa trong danh sách có thanh tiến độ (số bài đã học / tổng số bài) và nút **Bắt đầu học** / **Tiếp tục học** — nút này mở đúng bài bạn học gần nhất. Khóa bạn sở hữu được học trọn đời.
+
+Trong trang học:
+
+- **Video** ở giữa trang. Mở lại bài đang xem dở thì video tự tiếp tục từ chỗ cũ.
+- Xem hết video, bài tự được đánh dấu **✓ Đã học xong** và hiện nút **Bài tiếp theo →**. Bài không có video thì bấm **Đánh dấu đã học xong** sau khi đọc.
+- **Ghi chú / tài liệu** của giảng viên nằm ngay dưới video.
+- Cột bên phải là **giáo trình** kèm tiến độ: ✅ đã học, ▶ bài video, 📄 bài đọc. Bấm vào bài bất kỳ để chuyển; nút ← / → ở cuối trang chuyển bài trước / sau.
+- Đường dẫn video chỉ dùng được vài giờ và chỉ cho người đã mua; chia sẻ đường dẫn cho người khác sẽ không xem được.
 
 **Lịch sử đơn hàng**
 
@@ -152,6 +169,17 @@ Khóa học đã có học viên hoặc đơn hàng thì không xóa được, c
 - Mỗi bài: tên, thời lượng dạng `phút:giây` (ví dụ `12:30`), và ô **Học thử** — bài được đánh dấu sẽ xem được miễn phí trước khi mua.
 - Bài hoặc chương để trống tên sẽ bị bỏ qua khi lưu.
 - Thứ tự hiển thị trên trang là thứ tự trong form.
+- Đổi tên, đổi thứ tự hay sửa bài rồi bấm **Lưu** không làm mất video và tiến độ học của học viên. **Xóa một bài** (nút ✕ rồi Lưu) thì video và tiến độ của bài đó bị xóa theo.
+
+**Tải video và tài liệu cho bài học**
+
+1. Bài mới thêm cần **Lưu thay đổi** một lần trước khi tải video (trang ghi "Lưu khóa học trước để tải video cho bài này").
+2. Bấm **⬆ Tải video lên** dưới bài, chọn file MP4, WebM hoặc MOV (mặc định tối đa 2 GB). Thanh tiến độ hiện phần trăm đã tải.
+3. Tải xong, bài hiện **🎬 Có video** và thời lượng được điền tự động. Video được lưu ngay, không cần bấm Lưu.
+4. **Thay video** để thay file khác, **Xóa video** để gỡ.
+5. Mở **📝 Ghi chú / tài liệu bài học** để viết tóm tắt, bài tập, link tài liệu; phần này hiện dưới video và **cần bấm Lưu**.
+
+Video và ghi chú của bài không học thử chỉ người đã mua khóa (và quản trị viên) xem được. Nên dùng MP4 (H.264) để chạy được trên mọi trình duyệt và điện thoại.
 
 ## Đơn hàng, hoàn tiền và hủy đơn
 
@@ -250,6 +278,8 @@ Hầu hết sự cố thanh toán tự giải quyết khi mở lại đơn trong
 | Mã kích hoạt báo "đã được sử dụng" | Mỗi mã dùng một lần; kiểm tra **Khóa học của tôi** xem khóa đã có chưa, nếu chưa thì liên hệ nơi phát mã. |
 | Báo "Bạn thao tác quá nhiều lần" | Hệ thống tạm khóa sau nhiều lần thử sai (ví dụ 10 lần đăng nhập sai trong 15 phút). Chờ đúng thời gian ghi trong thông báo rồi thử lại. |
 | Không thấy nút Yêu cầu hoàn tiền | Đơn đã quá 365 ngày, đang có yêu cầu chờ xử lý, hoặc đã hoàn / hủy. |
+| Video báo "Đường dẫn video không hợp lệ hoặc đã hết hạn" | Trang học để mở quá lâu; tải lại trang để lấy đường dẫn mới. |
+| Bài học hiện 🔒 dù đã mua | Kiểm tra đã đăng nhập đúng tài khoản; khóa có thể đã được hoàn tiền (xem Lịch sử đơn hàng). |
 
 **Dành cho quản trị viên**
 
@@ -260,4 +290,6 @@ Hầu hết sự cố thanh toán tự giải quyết khi mở lại đơn trong
 | Báo "VNPay chưa hoàn tiền: …" | Chưa có gì thay đổi: khách vẫn giữ khóa học. Đọc lý do VNPay trả về, thử lại sau; nếu lặp lại, kiểm tra giao dịch trên cổng quản lý VNPay trước khi thử nữa để tránh hoàn hai lần. |
 | Báo "Đơn hàng đang được xử lý" | Một quản trị viên khác đang hoàn tiền đơn này; tải lại trang sau vài giây. |
 | Không xóa được khóa học | Khóa đã có đơn, học viên hoặc mã kích hoạt; dùng **Đang ẩn** thay vì xóa. |
+| Tải video báo "Chỉ nhận video MP4, WebM hoặc MOV" hoặc "vượt quá … MB" | Đổi định dạng / nén video trước khi tải; giới hạn dung lượng do người cài đặt cấu hình (`MAX_VIDEO_MB`). |
+| Video tải lên được nhưng học viên không xem được trên điện thoại | File dùng định dạng nén trình duyệt không hỗ trợ; xuất lại sang MP4 (H.264 + AAC) rồi **Thay video**. |
 | Khách báo "Cổng thanh toán chưa được cấu hình" | Server chưa có thông tin VNPay; báo người cài đặt (hướng dẫn trong tài liệu kỹ thuật [README.md](README.md)). |

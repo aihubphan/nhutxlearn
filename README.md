@@ -48,6 +48,21 @@ Hoàn tiền trong trang quản trị gọi **API hoàn tiền của VNPay** (to
 
 Logic nằm trong [server/vnpay.js](server/vnpay.js) (ký, kiểm tra chữ ký, gọi API hoàn tiền) và [server/orders.js](server/orders.js) (tạo đơn, xác nhận thanh toán, hoàn tiền).
 
+## Học trực tuyến
+
+- Quản trị viên tải video cho từng bài trong trình soạn khóa học (MP4 / WebM / MOV, tối đa `MAX_VIDEO_MB`, mặc định 2048 MB). Video được gửi thẳng trong thân request (`POST /api/admin/lessons/:id/video`), ghi ra file tạm rồi đổi tên, nên không bị giới hạn bởi bộ nhớ.
+- Video lưu ở `UPLOAD_DIR/videos` (mặc định `server/data/uploads/videos`), **không** có đường dẫn công khai. Trình phát xin một đường dẫn có chữ ký HMAC, hết hạn sau 6 giờ (`POST /api/lessons/:id/play`), và chỉ được cấp cho người đã mua khóa, quản trị viên, hoặc bài học thử. Có hỗ trợ tua (HTTP Range).
+- Tiến độ (vị trí đang xem, bài đã xong) lưu ở bảng `lesson_progress`. Lưu khóa học trong trang quản trị sẽ cập nhật bài học theo id, nên không làm mất video hay tiến độ.
+- Hoàn tiền một khóa sẽ xóa quyền học, nên học viên mất quyền xem video ngay.
+- **Sao lưu**: cần sao lưu cả `server/data/app.db` lẫn thư mục `server/data/uploads`.
+- Chạy sau Nginx: tăng `client_max_body_size` (ví dụ `2g`) và `proxy_request_buffering off` cho `/api/admin/lessons/`, nếu không Nginx sẽ chặn video lớn.
+
+Logic nằm trong [server/learning.js](server/learning.js); trang học là [src/pages/Learn.jsx](src/pages/Learn.jsx).
+
+## Lộ trình
+
+Giá lộ trình không lưu cố định: bằng tổng giá các khóa đang bán trong lộ trình, giảm `paths.discount_percent`. Khách đã có sẵn khóa nào thì không phải trả phần của khóa đó. Mua lộ trình qua `POST /api/orders` với `{ pathId }`, không cộng thêm mã giảm giá.
+
 ## Trang quản trị
 
 Mở http://localhost:5173/#/admin (hoặc bấm **⚙️ Quản trị** trên thanh menu sau khi đăng nhập bằng tài khoản quản trị).
@@ -123,6 +138,7 @@ server/
   index.js       Các route API công khai
   admin.js       Các route API quản trị
   orders.js      Nghiệp vụ đơn hàng: tạo đơn, xác nhận thanh toán, hoàn tiền
+  learning.js    Trang học: video có bảo vệ, tiến độ, tải video lên
   vnpay.js       Cổng thanh toán VNPay: ký, kiểm tra chữ ký, API hoàn tiền
   db.js          Tạo bảng + nạp dữ liệu mẫu
   auth.js        Băm mật khẩu (scrypt), JWT, middleware đăng nhập
@@ -152,6 +168,10 @@ src/
 | POST | `/api/orders` 🔒 | Tạo đơn hàng (giá tính lại ở server) |
 | POST | `/api/me/orders/:id/refund-request` 🔒 | Khách gửi yêu cầu hoàn tiền |
 | POST | `/api/me/orders/:id/pay`, `/cancel` 🔒 | Thanh toán lại / hủy đơn đang chờ thanh toán |
+| GET | `/api/learn/:courseId` | Giáo trình + tiến độ cho trang học (bài bị khóa không kèm nội dung) |
+| POST | `/api/lessons/:id/play` | Cấp đường dẫn video có chữ ký (người đã mua / bài học thử) |
+| GET | `/api/media/:token` | Phát video (hỗ trợ Range) |
+| POST | `/api/lessons/:id/progress` 🔒 | Lưu vị trí xem / đánh dấu đã học xong |
 | GET | `/api/payments/vnpay/ipn`, `/return` | VNPay gọi về sau khi khách thanh toán |
 | POST | `/api/courses/:id/enroll` 🔒 | Ghi danh khóa miễn phí |
 | POST | `/api/activate` 🔒 | Kích hoạt bằng mã |
