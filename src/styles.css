@@ -544,28 +544,6 @@ button.pill:hover { filter: brightness(.96); }
 .upload-progress { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 .upload-progress .bar { width: 160px; }
 
-/* Ảnh bìa khóa học (ảnh thư viện hoặc biểu tượng trên nền màu) */
-.course-thumb { position: relative; overflow: hidden; display: grid; place-items: center; background-color: var(--bg); flex-shrink: 0; }
-.course-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.card-thumb .course-thumb-emoji { font-size: 54px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.2)); }
-.mini-preview { border-radius: 10px; font-size: 48px; }
-
-/* Thư viện ảnh */
-.modal-box.library { width: min(880px, 100%); max-height: 86vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-.modal-box.library .modal-close { position: static; }
-.library-bar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-.library-item { position: relative; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0; background: #fff; }
-.library-item.on { border-color: var(--red); box-shadow: 0 0 0 3px #fde8eb; }
-.library-pick { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--bg); }
-.library-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.library-pick:hover img { opacity: .85; }
-.library-item figcaption { padding: 6px 8px; display: flex; flex-direction: column; font-size: 12px; }
-.library-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.library-delete { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; opacity: 0; transition: opacity .15s; }
-.library-item:hover .library-delete, .library-delete:focus { opacity: 1; }
-.library-empty { text-align: center; padding: 32px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
-
 /* Responsive */
 @media (max-width: 1024px) {
   .grid, .paths, .topics { grid-template-columns: repeat(3, 1fr); }

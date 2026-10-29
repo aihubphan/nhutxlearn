@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { formatPrice } from '../utils.js'
 import { api } from '../api.js'
-import CourseThumb from '../components/CourseThumb.jsx'
 
 export default function Cart({ cart, user, enrolledIds, onRemove, onPaid }) {
   const [code, setCode] = useState('')
@@ -79,7 +78,7 @@ export default function Cart({ cart, user, enrolledIds, onRemove, onPaid }) {
         <div className="box">
           {cart.map((c) => (
             <div key={c.id} className="cart-row">
-              <a href={`#/khoa-hoc/${c.id}`}><CourseThumb course={c} className="cart-thumb" /></a>
+              <a href={`#/khoa-hoc/${c.id}`} className="cart-thumb" style={{ background: c.color }}>{c.emoji}</a>
               <div className="cart-row-info">
                 <a href={`#/khoa-hoc/${c.id}`}><b>{c.title}</b></a>
                 <small className="muted">{c.teacher}</small>

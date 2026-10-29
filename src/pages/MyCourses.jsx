@@ -1,5 +1,4 @@
 import OrderHistory from './OrderHistory.jsx'
-import CourseThumb from '../components/CourseThumb.jsx'
 
 export default function MyCourses({ user, courses }) {
   if (!user) {
@@ -24,7 +23,7 @@ export default function MyCourses({ user, courses }) {
             const href = `#/hoc/${c.id}${p?.lastLessonId ? `/${p.lastLessonId}` : ''}`
             return (
               <div key={c.id} className="timeline-card my-course">
-                <a href={href}><CourseThumb course={c} className="timeline-emoji" /></a>
+                <a href={href} className="timeline-emoji" style={{ background: c.color }}>{c.emoji}</a>
                 <span className="my-course-info">
                   <a href={href}><b>{c.title}</b></a>
                   <small className="muted">{c.teacher} · {c.lessonCount} bài · {c.hours} giờ</small>

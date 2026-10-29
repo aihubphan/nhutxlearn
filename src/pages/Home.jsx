@@ -6,13 +6,12 @@ import LearningPaths from '../components/LearningPaths.jsx'
 import Promo from '../components/Promo.jsx'
 import Testimonials from '../components/Testimonials.jsx'
 import Status from '../components/Status.jsx'
-import { useApi } from '../api.js'
+import { useApi, useTopics } from '../api.js'
 import { collectionTitles } from '../data.js'
 
 export default function Home({ cart, onAdd }) {
   const { data, loading, error } = useApi('/home')
-  // Trang chủ luôn lấy số khóa mới nhất (không dùng bản nhớ tạm như menu danh mục)
-  const topics = useApi('/topics').data || []
+  const topics = useTopics()
 
   return (
     <>

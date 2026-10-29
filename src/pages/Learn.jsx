@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, mediaUrl, useApi } from '../api.js'
+import { api, useApi } from '../api.js'
 import Status from '../components/Status.jsx'
 import NotFound from './NotFound.jsx'
 
@@ -16,7 +16,7 @@ function Player({ lesson, courseId, user, track, onEnded }) {
     if (lesson.locked || !lesson.hasVideo) return
     let alive = true
     api(`/lessons/${lesson.id}/play`, { method: 'POST' })
-      .then((r) => alive && setSrc(mediaUrl(r.url)))
+      .then((r) => alive && setSrc(r.url))
       .catch((err) => alive && setError(err.message))
     return () => {
       alive = false

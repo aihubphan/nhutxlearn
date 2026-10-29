@@ -1,6 +1,8 @@
+# NhutX Learn
 
-<<<<<<< HEAD
 Website học trực tuyến: giao diện React (Vite) + API Node.js (Express) + cơ sở dữ liệu SQLite có sẵn trong Node.
+
+> Hướng dẫn sử dụng cho học viên và quản trị viên: [HUONG_DAN_SU_DUNG.md](HUONG_DAN_SU_DUNG.md). Tài liệu này dành cho người cài đặt và lập trình.
 
 ## Chạy khi phát triển
 
@@ -52,16 +54,10 @@ Logic nằm trong [server/vnpay.js](server/vnpay.js) (ký, kiểm tra chữ ký,
 - Video lưu ở `UPLOAD_DIR/videos` (mặc định `server/data/uploads/videos`), **không** có đường dẫn công khai. Trình phát xin một đường dẫn có chữ ký HMAC, hết hạn sau 6 giờ (`POST /api/lessons/:id/play`), và chỉ được cấp cho người đã mua khóa, quản trị viên, hoặc bài học thử. Có hỗ trợ tua (HTTP Range).
 - Tiến độ (vị trí đang xem, bài đã xong) lưu ở bảng `lesson_progress`. Lưu khóa học trong trang quản trị sẽ cập nhật bài học theo id, nên không làm mất video hay tiến độ.
 - Hoàn tiền một khóa sẽ xóa quyền học, nên học viên mất quyền xem video ngay.
-- **Sao lưu**: cần sao lưu cả `server/data/app.db` lẫn thư mục `server/data/uploads` (video và ảnh).
+- **Sao lưu**: cần sao lưu cả `server/data/app.db` lẫn thư mục `server/data/uploads`.
 - Chạy sau Nginx: tăng `client_max_body_size` (ví dụ `2g`) và `proxy_request_buffering off` cho `/api/admin/lessons/`, nếu không Nginx sẽ chặn video lớn.
 
 Logic nằm trong [server/learning.js](server/learning.js); trang học là [src/pages/Learn.jsx](src/pages/Learn.jsx).
-
-## Thư viện ảnh
-
-Ảnh bìa khóa học chọn từ **thư viện ảnh** trong trình soạn khóa học (JPG / PNG / WebP / GIF, tối đa `MAX_IMAGE_MB`, mặc định 5 MB). Loại ảnh được nhận diện từ nội dung file, không tin đuôi file. Ảnh lưu ở `UPLOAD_DIR/images` và phát công khai qua `/api/images/<tên ngẫu nhiên>`, được lưu đệm lâu dài. Ảnh đang dùng cho khóa học thì không xóa được.
-
-Số khóa của mỗi chủ đề trên trang chủ được đếm trực tiếp từ các khóa đang hiển thị, nên tự cập nhật khi thêm, ẩn hoặc xóa khóa học.
 
 ## Lộ trình
 
@@ -105,32 +101,6 @@ Khóa học đã có đơn hàng hoặc học viên thì không xóa được, c
 Trạng thái đơn: `pending` (chờ thanh toán) → `paid` (đã thanh toán) → `partially_refunded` (hoàn một phần) → `refunded` (hoàn toàn bộ), hoặc `cancelled` (đã hủy).
 Đơn thanh toán qua VNPay được hoàn tiền thật qua API của VNPay (xem mục Thanh toán VNPay).
 
-## Triển khai (đưa lên mạng)
-
-Trang gồm hai phần: **giao diện** (file tĩnh trong `dist/`) và **máy chủ API** (Express + SQLite + thư mục video/ảnh). Máy chủ API cần chạy liên tục và cần **ổ đĩa lưu lâu dài**.
-
-> **Vì sao deploy lên Vercel báo "Lỗi máy chủ (404)"?** Vercel chỉ đăng phần giao diện; máy chủ API không chạy trên đó, nên mọi lời gọi `/api/...` nhận trang 404 của Vercel. API này cũng không chạy được dạng serverless của Vercel: Vercel không có ổ đĩa lâu dài cho SQLite / video, và giới hạn mỗi request khoảng 4,5 MB (không tải được video).
-
-### Cách 1 (khuyên dùng): cả trang trên một máy chủ
-
-Render (Web Service + Persistent Disk), Railway (có Volume), Fly.io, hoặc VPS bất kỳ có Node ≥ 22.13:
-
-- Build: `npm install && npm run build` · Start: `npm start`
-- Gắn ổ đĩa (VD `/var/data`) và đặt `DB_FILE=/var/data/app.db` (video, ảnh tự lưu ở `/var/data/uploads`)
-- Đặt các biến trong `.env.example`: `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `PUBLIC_URL` (địa chỉ trang), VNPay, `TRUST_PROXY=1`
-- Không cần `VITE_API_URL`, `ALLOWED_ORIGINS`, `FRONTEND_URL`
-
-### Cách 2: giao diện trên Vercel, API ở nơi khác
-
-1. Triển khai API như Cách 1 (VD `https://api-nhutx.onrender.com`), thêm:
-   - `ALLOWED_ORIGINS=https://ten-du-an.vercel.app` (địa chỉ Vercel, nhiều địa chỉ cách nhau dấu phẩy)
-   - `FRONTEND_URL=https://ten-du-an.vercel.app` (để VNPay đưa khách về giao diện)
-   - `PUBLIC_URL=https://api-nhutx.onrender.com` (địa chỉ API, dùng cho VNPay)
-2. Trên Vercel → Project → Settings → **Environment Variables**: `VITE_API_URL=https://api-nhutx.onrender.com`, rồi **Redeploy** (biến này được gắn vào lúc build).
-3. `vercel.json` đã có sẵn trong dự án (build Vite, thư mục `dist`).
-
-Giao diện tải ảnh và video thẳng từ API, không đi vòng qua Vercel, nên không bị giới hạn dung lượng của Vercel.
-
 ## Chạy production
 
 ```bash
@@ -169,7 +139,6 @@ server/
   admin.js       Các route API quản trị
   orders.js      Nghiệp vụ đơn hàng: tạo đơn, xác nhận thanh toán, hoàn tiền
   learning.js    Trang học: video có bảo vệ, tiến độ, tải video lên
-  media.js       Thư viện ảnh: tải lên, phát ảnh, xóa
   vnpay.js       Cổng thanh toán VNPay: ký, kiểm tra chữ ký, API hoàn tiền
   db.js          Tạo bảng + nạp dữ liệu mẫu
   auth.js        Băm mật khẩu (scrypt), JWT, middleware đăng nhập
@@ -222,5 +191,3 @@ API quản trị nằm dưới `/api/admin/*` (stats, courses, orders, users, le
 - Đối soát tự động với VNPay (API `querydr`) cho các giao dịch mà IPN không đến.
 - Gửi email (xác nhận đơn, quên mật khẩu).
 - Test tự động.
-=======
->>>>>>> 406fd6a108afe3bb93ebbbd3fb88059046841b07

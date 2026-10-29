@@ -3,7 +3,6 @@ import { api, useApi } from '../api.js'
 import { formatPrice } from '../utils.js'
 import { useAction } from './useAction.js'
 import Status from '../components/Status.jsx'
-import CourseThumb from '../components/CourseThumb.jsx'
 
 export default function Courses() {
   const { data: courses, loading, error, reload } = useApi('/admin/courses')
@@ -51,7 +50,7 @@ export default function Courses() {
               <tr key={c.id} className={c.published ? '' : 'dimmed'}>
                 <td>
                   <a href={`#/admin/khoa-hoc/${c.id}`} className="course-cell">
-                    <CourseThumb course={c} className="mini-thumb" />
+                    <span className="mini-thumb" style={{ background: c.color }}>{c.emoji}</span>
                     <span><b>{c.title}</b><small className="muted">#{c.id} · {c.teacher}</small></span>
                   </a>
                 </td>

@@ -28,8 +28,7 @@ export function getOrderDetail(id) {
     FROM orders o JOIN users u ON u.id = o.user_id WHERE o.id = ?`).get(id)
   if (!order) return null
 
-  const items = db.prepare(`SELECT oi.course_id AS id, c.title, c.emoji, c.color, oi.price, oi.refunded,
-      CASE WHEN c.image IS NULL THEN NULL ELSE '/api/images/' || c.image END AS imageUrl
+  const items = db.prepare(`SELECT oi.course_id AS id, c.title, c.emoji, c.color, oi.price, oi.refunded
     FROM order_items oi JOIN courses c ON c.id = oi.course_id WHERE oi.order_id = ?`).all(id)
     .map((i) => ({ ...i, refunded: !!i.refunded, paid: share(order, i.price) }))
 

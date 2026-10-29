@@ -169,18 +169,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS lesson_progress (
 export const VIDEO_DIR = resolve(process.env.UPLOAD_DIR || resolve(dirname(file), 'uploads'), 'videos')
 mkdirSync(VIDEO_DIR, { recursive: true })
 
-// Thư viện ảnh: ảnh bìa khóa học (công khai), chọn lại được cho nhiều khóa
-db.exec(`CREATE TABLE IF NOT EXISTS media_images (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  file TEXT NOT NULL UNIQUE,
-  name TEXT,
-  size INTEGER,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-)`)
-addColumn('courses', 'image', 'TEXT')
-export const IMAGE_DIR = resolve(process.env.UPLOAD_DIR || resolve(dirname(file), 'uploads'), 'images')
-mkdirSync(IMAGE_DIR, { recursive: true })
-
 // Lộ trình: giá tính từ các khóa bên trong, giảm theo %
 if (addColumn('paths', 'discount_percent', 'INTEGER NOT NULL DEFAULT 20')) {
   const set = db.prepare('UPDATE paths SET discount_percent = ? WHERE id = ?')
