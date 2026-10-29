@@ -1,4 +1,4 @@
-# NhutX Learn
+# NhutX Learn --
 
 Website học trực tuyến: giao diện React (Vite) + API Node.js (Express) + cơ sở dữ liệu SQLite có sẵn trong Node.
 
