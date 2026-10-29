@@ -93,7 +93,13 @@ export function startPayment(orderId, req, ownerId = null) {
   // Mã giao dịch phải duy nhất với VNPay, kể cả khi database bị tạo lại
   const txnRef = `NX${order.id}T${Date.now()}${randomInt(100, 999)}`
   db.prepare('INSERT INTO payments (order_id, provider, txn_ref, amount) VALUES (?, ?, ?, ?)').run(order.id, vnpay.mode, txnRef, order.total)
-  return vnpay.buildPaymentUrl({ txnRef, amount: order.total, orderInfo: `Thanh toan don hang ${order.id}`, ipAddr: clientIp(req) })
+  return vnpay.buildPaymentUrl({
+    txnRef,
+    amount: order.total,
+    orderInfo: `Thanh toan don hang ${order.id}`,
+    ipAddr: clientIp(req),
+    requestOrigin: `${req.protocol}://${req.get('host')}`,
+  })
 }
 
 /**

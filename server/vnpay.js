@@ -42,7 +42,10 @@ export const signParams = (params) => {
   return `${query}&vnp_SecureHash=${hmac(query)}`
 }
 
-export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr }) {
+// requestOrigin: địa chỉ khách đang mở trang (VD http://192.168.1.127:5173 khi thử trên điện thoại).
+// Chỉ dùng cho cổng giả lập khi chạy dev; VNPay thật luôn dùng PUBLIC_URL cố định, không tin header Host.
+export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr, requestOrigin }) {
+  const site = mode === 'mock' && requestOrigin ? requestOrigin : publicUrl
   const now = new Date()
   const params = {
     vnp_Version: '2.1.0',
@@ -54,12 +57,12 @@ export function buildPaymentUrl({ txnRef, amount, orderInfo, ipAddr }) {
     vnp_OrderInfo: orderInfo,
     vnp_OrderType: 'other',
     vnp_Amount: amount * 100,
-    vnp_ReturnUrl: `${publicUrl}/api/payments/vnpay/return`,
+    vnp_ReturnUrl: `${site}/api/payments/vnpay/return`,
     vnp_IpAddr: ipAddr,
     vnp_CreateDate: vnTime(now),
     vnp_ExpireDate: vnTime(new Date(now.getTime() + 15 * 60e3)),
   }
-  const base = mode === 'vnpay' ? PAY_URL : `${publicUrl}/api/payments/mock-vnpay`
+  const base = mode === 'vnpay' ? PAY_URL : `${site}/api/payments/mock-vnpay`
   return `${base}?${signParams(params)}`
 }
 
