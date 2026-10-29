@@ -1,19 +1,20 @@
 import { formatPrice, discount } from '../utils.js'
+import CourseThumb from './CourseThumb.jsx'
 
 export default function CourseCard({ course, onAdd, inCart }) {
-  const { id, title, teacher, rating, reviews, price, oldPrice, emoji, color } = course
+  const { id, title, teacher, rating, reviews, price, oldPrice } = course
   const off = discount(price, oldPrice)
   const href = `#/khoa-hoc/${id}`
 
   return (
     <article className="card">
-      <div className="card-thumb" style={{ background: `linear-gradient(135deg, ${color}, ${color}aa)` }}>
-        <a href={href} className="card-link" aria-label={title}><span className="card-emoji">{emoji}</span></a>
+      <CourseThumb course={course} className="card-thumb">
+        <a href={href} className="card-link" aria-label={title} />
         {off > 0 && <span className="card-off">-{off}%</span>}
         <button className={`card-add ${inCart ? 'added' : ''}`} onClick={() => onAdd(course)}>
           {inCart ? '✓ Đã thêm' : '+ Giỏ hàng'}
         </button>
-      </div>
+      </CourseThumb>
       <div className="card-body">
         <h3 title={title}><a href={href}>{title}</a></h3>
         <p className="teacher">{teacher}</p>

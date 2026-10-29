@@ -3,6 +3,7 @@ import { formatPrice, discount } from '../utils.js'
 import { navigate } from '../router.js'
 import { api, useApi } from '../api.js'
 import CourseCard from '../components/CourseCard.jsx'
+import CourseThumb from '../components/CourseThumb.jsx'
 import Status from '../components/Status.jsx'
 import NotFound from './NotFound.jsx'
 
@@ -114,9 +115,7 @@ export default function CourseDetail({ id, cart, onAdd, user, enrolledIds, onEnr
         </div>
 
         <aside className="buy-box">
-          <div className="buy-thumb" style={{ background: `linear-gradient(135deg, ${course.color}, ${course.color}aa)` }}>
-            <span>{course.emoji}</span>
-          </div>
+          <CourseThumb course={course} className="buy-thumb" />
           <div className="buy-body">
             <div className="price big">
               <b>{course.price ? formatPrice(course.price) : 'Miễn phí'}</b>

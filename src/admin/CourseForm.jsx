@@ -4,10 +4,12 @@ import { navigate } from '../router.js'
 import { useAction } from './useAction.js'
 import Status from '../components/Status.jsx'
 import LessonVideo from './LessonVideo.jsx'
+import ImageLibrary from './ImageLibrary.jsx'
+import CourseThumb from '../components/CourseThumb.jsx'
 
 const empty = {
   title: '', teacher: '', teacherBio: '', topic: 'tech', collection: '', price: 0, oldPrice: 0,
-  emoji: '📘', color: '#1fa855', level: 'Cơ bản', hours: 0, description: '', outcomes: [''], published: true,
+  emoji: '📘', color: '#1fa855', image: null, imageUrl: null, level: 'Cơ bản', hours: 0, description: '', outcomes: [''], published: true,
   curriculum: [{ name: 'Giới thiệu', lessons: [{ title: 'Bài mở đầu', duration: '5:00', preview: true }] }],
 }
 
@@ -18,6 +20,7 @@ export default function CourseForm({ id }) {
   const topics = useTopics()
   const [form, setForm] = useState(id ? null : empty)
   const [loadError, setLoadError] = useState(null)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [saved, setSaved] = useState(() => {
     const created = id && String(justCreatedId) === String(id)
     justCreatedId = null
@@ -182,12 +185,31 @@ export default function CourseForm({ id }) {
 
           <section className="box form">
             <h3>Ảnh đại diện</h3>
+            <CourseThumb course={form} className="mini-preview" />
+            <button type="button" className="btn-outline full" onClick={() => setLibraryOpen(true)}>
+              🖼 {form.image ? 'Đổi ảnh từ thư viện' : 'Chọn ảnh từ thư viện ảnh'}
+            </button>
+            {form.image && (
+              <button type="button" className="link-btn center-text" onClick={() => update((f) => ({ ...f, image: null, imageUrl: null }))}>
+                Bỏ ảnh, dùng biểu tượng
+              </button>
+            )}
+            <p className="muted small">Khi chưa có ảnh, khóa học hiển thị biểu tượng trên nền màu:</p>
             <div className="form-row">
               <label>Biểu tượng<input value={form.emoji} onChange={set('emoji')} maxLength="8" /></label>
               <label>Màu nền<input type="color" value={form.color} onChange={set('color')} /></label>
             </div>
-            <div className="mini-preview" style={{ background: `linear-gradient(135deg, ${form.color}, ${form.color}aa)` }}>{form.emoji}</div>
           </section>
+          {libraryOpen && (
+            <ImageLibrary
+              selected={form.image}
+              onClose={() => setLibraryOpen(false)}
+              onSelect={(img) => {
+                update((f) => ({ ...f, image: img.file, imageUrl: img.url }))
+                setLibraryOpen(false)
+              }}
+            />
+          )}
         </div>
       </div>
     </form>

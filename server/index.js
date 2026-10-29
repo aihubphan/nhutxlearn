@@ -15,6 +15,7 @@ const { db, transaction } = await import('./db.js')
 const { HttpError, hashPassword, verifyPassword, signToken, optionalAuth, requireAuth } = await import('./auth.js')
 const { default: adminRouter } = await import('./admin.js')
 const { default: learningRouter, courseProgress } = await import('./learning.js')
+const { default: mediaRouter } = await import('./media.js')
 const { getOrderDetail, requestRefund, createOrder, startPayment, confirmPayment, cancelPendingOrder } = await import('./orders.js')
 const { mode: paymentMode, verifySignature: verifyVnpaySignature, signParams: signVnpayParams, vnTime } = await import('./vnpay.js')
 
@@ -23,8 +24,30 @@ const app = express()
 // Khi chạy sau Nginx / Cloudflare… đặt TRUST_PROXY=1 để lấy đúng IP người dùng cho giới hạn tần suất
 if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY)
 
+// Giao diện đặt ở nơi khác (VD Vercel) → liệt kê địa chỉ của nó trong ALLOWED_ORIGINS, cách nhau dấu phẩy
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean)
+
+app.use('/api', (req, res, next) => {
+  if (!allowedOrigins.length) return next()
+  // Luôn báo bộ nhớ đệm rằng phản hồi phụ thuộc Origin (ảnh được cả <img> lẫn fetch tải về)
+  res.vary('Origin')
+  const origin = req.get('origin')
+  if (origin && allowedOrigins.includes(origin)) {
+    res.set({
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Duration, X-Filename',
+      'Access-Control-Max-Age': '600',
+    })
+    if (req.method === 'OPTIONS') return res.status(204).end()
+  }
+  next()
+})
+
 // Header bảo mật (CSP, chống nhúng iframe, chống đoán kiểu nội dung...)
 app.use(helmet({
+  // Cho phép trang ở địa chỉ khác (Vercel) hiển thị ảnh bìa và phát video từ API
+  crossOriginResourcePolicy: { policy: allowedOrigins.length ? 'cross-origin' : 'same-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -77,6 +100,7 @@ const str = (v, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : 
 const COURSE_FIELDS = `
   c.id, c.title, c.teacher, c.topic_id AS topic, c.collection, c.rating, c.reviews, c.price,
   c.old_price AS oldPrice, c.emoji, c.color, c.level, c.hours, c.students,
+  CASE WHEN c.image IS NULL THEN NULL ELSE '/api/images/' || c.image END AS imageUrl,
   (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lessonCount`
 
 // Trang công khai chỉ thấy khóa học đang hiển thị (published = 1)
@@ -96,8 +120,11 @@ const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.rol
 // ---------- Danh mục & nội dung ----------
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
+// Số khóa của mỗi chủ đề = số khóa đang hiển thị thật, tự cập nhật khi thêm / ẩn / xóa khóa học
 app.get('/api/topics', (_req, res) => {
-  res.json(db.prepare('SELECT id, name, icon, count FROM topics ORDER BY sort').all())
+  res.json(db.prepare(`SELECT t.id, t.name, t.icon,
+      (SELECT COUNT(*) FROM courses c WHERE c.topic_id = t.id AND c.published = 1) AS count
+    FROM topics t ORDER BY t.sort`).all())
 })
 
 // ---------- Lộ trình ----------
@@ -336,7 +363,9 @@ app.get('/api/payments/vnpay/ipn', (req, res) => {
 app.get('/api/payments/vnpay/return', (req, res) => {
   const { rspCode, orderId } = confirmPayment(req.query)
   const status = rspCode === '97' ? 'loi-chu-ky' : rspCode === '04' ? 'sai-so-tien' : 'xong'
-  res.redirect(`/#/thanh-toan/ket-qua?don=${orderId ?? ''}&kq=${status}`)
+  // FRONTEND_URL: địa chỉ giao diện khi giao diện và API ở hai nơi khác nhau (VD Vercel + Render)
+  const frontend = (process.env.FRONTEND_URL || '').replace(/\/$/, '')
+  res.redirect(`${frontend}/#/thanh-toan/ket-qua?don=${orderId ?? ''}&kq=${status}`)
 })
 
 // Cổng VNPay giả lập — chỉ có khi chạy dev mà chưa cấu hình VNPay thật
@@ -422,6 +451,7 @@ app.post('/api/newsletter', limits.newsletter, (req, res) => {
 
 app.use('/api/admin', adminRouter)
 app.use('/api', learningRouter)
+app.use('/api', mediaRouter)
 
 app.use('/api', (_req, _res) => {
   throw new HttpError(404, 'API không tồn tại')
@@ -446,4 +476,10 @@ app.use((err, _req, res, _next) => {
 
 // Dùng API_PORT (không dùng PORT) để không đụng cổng của Vite khi chạy dev
 const PORT = Number(process.env.API_PORT) || 4000
-app.listen(PORT, () => console.log(`✓ API đang chạy tại http://localhost:${PORT}`))
+app.listen(PORT, (err) => {
+  if (err) {
+    console.error(`✗ Không mở được cổng ${PORT}: ${err.code === 'EADDRINUSE' ? 'cổng đang được dùng bởi chương trình khác' : err.message}`)
+    process.exit(1)
+  }
+  console.log(`✓ API đang chạy tại http://localhost:${PORT}`)
+})

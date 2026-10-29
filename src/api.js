@@ -16,6 +16,15 @@ export const setToken = (token) => {
   } catch {}
 }
 
+// Địa chỉ máy chủ API. Để trống = cùng địa chỉ với trang (chạy dev, hoặc Express phục vụ cả trang).
+// Khi giao diện nằm trên Vercel còn API nằm nơi khác: đặt VITE_API_URL=https://api.ten-mien.vn lúc build.
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+// Đường dẫn API trả về dạng "/api/..." (ảnh bìa, video) → địa chỉ đầy đủ tới máy chủ API
+export const mediaUrl = (path) => (path && path.startsWith('/') ? `${API_BASE}${path}` : path)
+
+const API_MISSING = 'Không kết nối được máy chủ API. Nếu trang được triển khai lên Vercel, hãy đặt biến VITE_API_URL (xem README, mục Triển khai).'
+
 export async function api(path, { method = 'GET', body } = {}) {
   const headers = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
@@ -24,14 +33,16 @@ export async function api(path, { method = 'GET', body } = {}) {
 
   let res
   try {
-    res = await fetch(`/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    res = await fetch(`${API_BASE}/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   } catch {
-    throw new Error('Không kết nối được máy chủ')
+    throw new Error(API_BASE ? 'Không kết nối được máy chủ API' : API_MISSING)
   }
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    const err = new Error(data.error || `Lỗi máy chủ (${res.status})`)
-    err.status = res.status
+  // Máy chủ API luôn trả JSON; nhận về HTML (VD: trang 404 của Vercel) nghĩa là đang gọi nhầm chỗ
+  const isJson = (res.headers.get('content-type') || '').includes('application/json')
+  const data = isJson ? await res.json().catch(() => ({})) : {}
+  if (!res.ok || !isJson) {
+    const err = new Error(data.error || (isJson ? `Lỗi máy chủ (${res.status})` : API_MISSING))
+    err.status = isJson ? res.status : 0
     throw err
   }
   return data
@@ -41,7 +52,7 @@ export async function api(path, { method = 'GET', body } = {}) {
 export function uploadFile(path, file, { headers = {}, onProgress } = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `/api${path}`)
+    xhr.open('POST', `${API_BASE}/api${path}`)
     const token = getToken()
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')

@@ -3,6 +3,7 @@ import { formatPrice } from '../utils.js'
 import { navigate } from '../router.js'
 import { api, useApi } from '../api.js'
 import Status from '../components/Status.jsx'
+import CourseThumb from '../components/CourseThumb.jsx'
 import NotFound from './NotFound.jsx'
 
 export default function PathDetail({ id, user, onPaid }) {
@@ -77,7 +78,7 @@ export default function PathDetail({ id, user, onPaid }) {
             <li key={c.id}>
               <span className="step" style={{ background: path.color }}>{i + 1}</span>
               <a href={`#/khoa-hoc/${c.id}`} className="timeline-card">
-                <span className="timeline-emoji" style={{ background: c.color }}>{c.emoji}</span>
+                <CourseThumb course={c} className="timeline-emoji" />
                 <span>
                   <b>{c.title}</b>
                   <small className="muted">{c.teacher} · {c.lessonCount} bài · {c.hours} giờ</small>

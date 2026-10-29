@@ -4,6 +4,7 @@ import { formatPrice, formatDate } from '../utils.js'
 import { OrderStatus, eventLabels, paymentMethodLabels } from '../orderStatus.jsx'
 import { useAction } from './useAction.js'
 import Status from '../components/Status.jsx'
+import CourseThumb from '../components/CourseThumb.jsx'
 
 export default function OrderDetail({ id }) {
   const [order, setOrder] = useState(null)
@@ -80,7 +81,7 @@ export default function OrderDetail({ id }) {
                     )}
                     <td>
                       <span className="course-cell">
-                        <span className="mini-thumb" style={{ background: i.color }}>{i.emoji}</span>
+                        <CourseThumb course={i} className="mini-thumb" />
                         <b>{i.title}</b>
                       </span>
                     </td>

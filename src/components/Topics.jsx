@@ -9,7 +9,7 @@ export default function Topics({ topics }) {
           <a href={`#/khoa-hoc?chu-de=${t.id}`} key={t.id} className="topic">
             <span className="topic-icon">{t.icon}</span>
             <span className="topic-name">{t.name}</span>
-            <span className="topic-count">{t.count} khóa học</span>
+            <span className="topic-count">{t.count ? `${t.count} khóa học` : 'Sắp ra mắt'}</span>
           </a>
         ))}
       </div>

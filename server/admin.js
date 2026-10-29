@@ -4,6 +4,7 @@ import { db, transaction } from './db.js'
 import { HttpError, requireAdmin } from './auth.js'
 import { ORDER_STATUSES, getOrderDetail, refundOrder, rejectRefundRequest, cancelPendingOrder, clientIp } from './orders.js'
 import { receiveLessonVideo, deleteLessonVideo, removeVideoFiles } from './learning.js'
+import { listImages, receiveImage, deleteImage, imageExists, imageUrl } from './media.js'
 
 const router = Router()
 router.use(requireAdmin)
@@ -61,6 +62,7 @@ router.get('/stats', (_req, res) => {
 router.get('/courses', (_req, res) => {
   res.json(db.prepare(`SELECT c.id, c.title, c.teacher, c.topic_id AS topic, t.name AS topicName, c.collection,
       c.price, c.old_price AS oldPrice, c.emoji, c.color, c.published,
+      CASE WHEN c.image IS NULL THEN NULL ELSE '/api/images/' || c.image END AS imageUrl,
       (SELECT COUNT(*) FROM order_items oi JOIN orders o ON o.id = oi.order_id
         WHERE oi.course_id = c.id AND oi.refunded = 0 AND o.paid_at IS NOT NULL) AS sold,
       (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS students
@@ -70,9 +72,10 @@ router.get('/courses', (_req, res) => {
 
 router.get('/courses/:id', (req, res) => {
   const c = db.prepare(`SELECT id, title, teacher, teacher_bio AS teacherBio, topic_id AS topic, collection, rating, reviews,
-    price, old_price AS oldPrice, emoji, color, level, hours, description, outcomes, published
+    price, old_price AS oldPrice, emoji, color, level, hours, description, outcomes, published, image
     FROM courses WHERE id = ?`).get(idParam(req))
   if (!c) throw new HttpError(404, 'Không tìm thấy khóa học')
+  c.imageUrl = imageUrl(c.image)
 
   const curriculum = []
   for (const l of db.prepare(`SELECT id, chapter_no, chapter, title, duration, preview, content, video_file, video_size
@@ -98,6 +101,7 @@ function parseCourse(b = {}) {
     price: int(b.price),
     oldPrice: int(b.oldPrice || 0),
     emoji: str(b.emoji, 8) || '📘',
+    image: str(b.image, 100) || null,
     color: /^#[0-9a-f]{6}$/i.test(b.color) ? b.color : '#1fa855',
     level: LEVELS.includes(b.level) ? b.level : LEVELS[0],
     hours: Number(b.hours) || 0,
@@ -119,6 +123,7 @@ function parseCourse(b = {}) {
   if (!course.title) throw new HttpError(400, 'Vui lòng nhập tên khóa học')
   if (!course.teacher) throw new HttpError(400, 'Vui lòng nhập tên giảng viên')
   if (!db.prepare('SELECT 1 FROM topics WHERE id = ?').get(course.topic)) throw new HttpError(400, 'Chủ đề không hợp lệ')
+  if (course.image && !imageExists(course.image)) throw new HttpError(400, 'Ảnh bìa không có trong thư viện ảnh')
   if (!(course.price >= 0)) throw new HttpError(400, 'Giá bán không hợp lệ')
   if (!(course.oldPrice >= 0)) throw new HttpError(400, 'Giá gốc không hợp lệ')
   if (course.oldPrice && course.oldPrice < course.price) throw new HttpError(400, 'Giá gốc phải lớn hơn hoặc bằng giá bán')
@@ -127,16 +132,17 @@ function parseCourse(b = {}) {
 
 function saveCourse(id, c) {
   const values = [c.title, c.teacher, c.teacherBio, c.topic, c.collection, c.price, c.oldPrice, c.emoji, c.color,
-    c.level, c.hours, c.description, JSON.stringify(c.outcomes), c.published ? 1 : 0]
+    c.level, c.hours, c.description, JSON.stringify(c.outcomes), c.published ? 1 : 0, c.image]
 
   return transaction(() => {
     if (id) {
       db.prepare(`UPDATE courses SET title = ?, teacher = ?, teacher_bio = ?, topic_id = ?, collection = ?, price = ?,
-        old_price = ?, emoji = ?, color = ?, level = ?, hours = ?, description = ?, outcomes = ?, published = ? WHERE id = ?`)
+        old_price = ?, emoji = ?, color = ?, level = ?, hours = ?, description = ?, outcomes = ?, published = ?, image = ?
+        WHERE id = ?`)
         .run(...values, id)
     } else {
       id = Number(db.prepare(`INSERT INTO courses (title, teacher, teacher_bio, topic_id, collection, price, old_price,
-        emoji, color, level, hours, description, outcomes, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        emoji, color, level, hours, description, outcomes, published, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(...values).lastInsertRowid)
     }
     // Cập nhật bài học theo id (giữ video + tiến độ học), thêm bài mới, xóa bài bị bỏ đi
@@ -182,6 +188,17 @@ router.post('/lessons/:id/video', async (req, res) => {
 
 router.delete('/lessons/:id/video', async (req, res) => {
   res.json(await deleteLessonVideo(idParam(req)))
+})
+
+// ---------- Thư viện ảnh ----------
+router.get('/images', (_req, res) => res.json(listImages()))
+
+router.post('/images', async (req, res) => {
+  res.status(201).json(await receiveImage(req))
+})
+
+router.delete('/images/:id', async (req, res) => {
+  res.json(await deleteImage(idParam(req)))
 })
 
 router.patch('/courses/:id', (req, res) => {
