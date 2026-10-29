@@ -1,5 +1,5 @@
-# NhutX Learn
 
+<<<<<<< HEAD
 Website học trực tuyến: giao diện React (Vite) + API Node.js (Express) + cơ sở dữ liệu SQLite có sẵn trong Node.
 
 ## Chạy khi phát triển
@@ -222,3 +222,5 @@ API quản trị nằm dưới `/api/admin/*` (stats, courses, orders, users, le
 - Đối soát tự động với VNPay (API `querydr`) cho các giao dịch mà IPN không đến.
 - Gửi email (xác nhận đơn, quên mật khẩu).
 - Test tự động.
+=======
+>>>>>>> 406fd6a108afe3bb93ebbbd3fb88059046841b07
